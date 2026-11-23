@@ -1,91 +1,33 @@
-# 版式骨架与可复用 HTML 片段（党团活动 · 党旗红）
+# 参考样式解析与排版
 
-## 骨架（自上而下）
+## 先读样式，再选组件
 
-1. 顶部标识：`党 团 活 动` 两侧短发丝线 + 一条全宽红线
-2. 标题卡（红边框）：主标题 + 副标题 + 全宽红线 + 单位 / 班级两行灰字
-3. 活动概况卡：缎带标题「活动概况」+ 正文 + 现场照片 + 图注
-4. 小节卡 01 / 02 / 03：缎带标题 + 正文 + （图片 + 图注）+ 卡末分隔线
-5. 口号条（红边框、浅黄底）
-6. `— END —`
-7. 署名（顶部虚线）
+在参考图文中各找一处有代表性的开场、完整章节和收尾。滚动检查实际画面，结合 DOM 记录：
 
-一个小节 = **一张卡**。标题、正文、图片、图注、分隔线必须在同一个卡片 `div` 里，否则会出现"标题在框外"的观感。
+- **版心与正文**：目标画布实际宽度、组件内边距、字号、字重、行距、对齐、文字与背景色。检查最终生效的样式，不只看内联声明。
+- **层级**：优先识别模板中“主标题”等占位词，再结合编号、色块、箭头及正文语义判断层级。类似的显眼组件优先考虑为主标题，但以用户指定和实际内容为准。双语内容以参考的主辅关系为准。
+- **节奏**：观察章间、标题与正文之间、自然段之间的相对间距，以及装饰在哪些位置重复。区分有意留白和异常空隙。
 
-## 配色
+同一层级优先复用同一组件和样式。对于参考中没有的内容，从相近组件借用字体、配色和间距；不把单个案例的视觉元素当成默认模板。
 
-| 用途 | 值 |
+续编时，先按文案标题、已有正文和占位把组件分为「保留」「填槽」「新增」。同一内容已出现就不再插一次；有明确占位时，在该位置填入或扩展模板；没有占位时，在相邻章节之间或文末按文案顺序插入。不要把第一个空格当成默认写入点：它可能是留白或装饰的一部分。
+
+## 内容与组件映射
+
+| 文本用途 | 排版方法 |
 | --- | --- |
-| 党团活动主色（党旗红） | `rgb(199, 0, 11)` / `#c7000b` |
-| 浅黄底（口号条） | `#fff8e8` |
-| 卡片底色 | `#ffffff` |
-| 页面底色 | `#fdf8eb` |
-| 卡片描边 | `#f0e0c0` |
-| 图注灰 | `#a0a0a0` / `rgb(160, 160, 160)` |
-| 副标题金 | `rgb(184, 135, 60)` |
-| 标题卡描边 | `#c7000b` |
+| 文章标题、开场 | 沿用参考首屏结构；已有开场不重复插入。 |
+| 章节与板块 | 复用参考的章节和板块组件；按实际层级设置主副标题，不把编号、中英文和说明挤在一行。 |
+| 正文、列表、行动步骤 | 以可编辑的语义块填入；说明或步骤可另起一行，用字重和留白区分。 |
+| 概况、重点信息 | 参考有相应样式时用信息卡；普通段落不默认加边框或底色。 |
+| 日程、对照信息 | 优先复用原生表格或时间轴。先数文案已有的阶段，再增减原生数据行，一阶段一行；模板行数不决定文案阶段数，表头和装饰行不计入。按信息量分配列宽并检查换行。 |
+| 图片、图注 | 保持比例，按组件实际可用宽度适配；图注紧邻对应图片，避免与下一段混淆。 |
+| 报名或其他行动入口 | 有这类内容时用参考中的入口样式，清楚区分名称、说明与链接。没有对应信息则按主流程处理。 |
 
-非党团主题（节日、科普等）按活动性质换主色，但同一篇只用一套主色。
+一个章节可以由多个原生组件组成。标题、正文、图片或分隔符是否排在同一个容器内，由参考的视觉分组决定，而不是由组件数量决定。排版可调整换行和分组，不自行删改给定文本。
 
-## 尺寸
+## 分隔符、表色与溢出
 
-- 秀米图文正文宽 **343px**（单栏）。
-- 组件外层 wrapper：`background-color:#fdf8eb;padding:16px 12px 20px 12px;`
-- 卡片：`background-color:#ffffff;border:1px solid #f0e0c0;padding:18px 14px 10px 14px;margin:0 0 14px 0;`
-- 卡内可用宽 = 343 − 24（外层左右） − 2（边框） − 28（卡内左右） = **289px**，所以卡内图片一律 `width:100%`。
-- 正文 `line-height:1.8; text-indent:2em;`，字间距 1，两端对齐（规范见 `ucas-cre-standards.md`）。
-
-## 片段
-
-### 缎带小标题
-
-```html
-<p style="text-align: center;"><span style="display: inline-block; width: 8px; height: 26px; vertical-align: top; border-top: 13px solid rgb(199, 0, 11); border-bottom: 13px solid rgb(199, 0, 11); border-left: 8px solid transparent; font-size: 12px; line-height: 1px;">&nbsp;</span><span style="display: inline-block; height: 26px; line-height: 26px; padding: 0px 12px; font-size: 16px; background-color: rgb(199, 0, 11); color: rgb(255, 255, 255); font-weight: bold; letter-spacing: 2px; vertical-align: top;">01&nbsp;&nbsp;领学导学</span><span style="display: inline-block; width: 8px; height: 26px; vertical-align: top; border-top: 13px solid rgb(199, 0, 11); border-bottom: 13px solid rgb(199, 0, 11); border-right: 8px solid transparent; font-size: 12px; line-height: 1px;">&nbsp;</span></p>
-```
-
-### 12px 空段（标题与正文之间）
-
-```html
-<p style="height: 12px; font-size: 12px; line-height: 1px;">&nbsp;</p>
-```
-
-### 图片 + 图注
-
-```html
-<p style="text-align: center;"><img src="//img.xiumi.us/xmi/ua/XXXX/i/xxxxxxxx.jpg?x-oss-process=style/xmwebp" style="width:100%;vertical-align:middle;"></p>
-<p style="font-size: 12px; color: rgb(160, 160, 160); text-align: center; letter-spacing: 0px; line-height: 1.6;">8xx班开展民族团结教育主题党团日活动</p>
-```
-
-### 卡末分隔线（全宽红线 + ◆ + 全宽红线）
-
-```html
-<p style="text-align: center; line-height: 1px; font-size: 12px;"><span style="display: inline-block; width: 100%; height: 1px; background-color: rgb(199, 0, 11); vertical-align: middle; line-height: 1px;">&nbsp;</span></p>
-<p style="text-align: center;"><span style="display: inline-block; width: 44px; height: 1px; background-color: rgb(199, 0, 11); vertical-align: middle; font-size: 12px; line-height: 1px;">&nbsp;</span><span style="color: rgb(199, 0, 11); font-size: 12px; padding: 0px 8px; vertical-align: middle; line-height: 1px;">◆</span><span style="display: inline-block; width: 44px; height: 1px; background-color: rgb(199, 0, 11); vertical-align: middle; font-size: 12px; line-height: 1px;">&nbsp;</span></p>
-<p style="text-align: center; line-height: 1px; font-size: 12px;"><span style="display: inline-block; width: 100%; height: 1px; background-color: rgb(199, 0, 11); vertical-align: middle; line-height: 1px;">&nbsp;</span></p>
-```
-
-### 口号条
-
-```html
-<div style="border:1px solid #c7000b;background-color:#fff8e8;padding:14px 10px;text-align:center;margin:0 0 14px 0;"><p style="font-weight: bold; color: rgb(199, 0, 11); letter-spacing: 3px;">手足相亲 &nbsp;守望相助 &nbsp;团结一心 &nbsp;共同奋斗</p></div>
-```
-
-### END 与署名
-
-```html
-<p style="text-align: center; font-size: 20px; font-weight: bold; color: rgb(199, 0, 11); letter-spacing: 5px;">— END —</p>
-<div style="border-top:1px dashed #e7d6b6;padding-top:12px;text-align:center;">
-<p style="font-size: 13px; color: rgb(122, 122, 122); line-height: 2;">图片|张三、李四</p>
-<p style="font-size: 13px; color: rgb(122, 122, 122); line-height: 2;">文案|张三</p>
-<p style="font-size: 13px; color: rgb(122, 122, 122); line-height: 2;">排版|张三</p>
-<p style="font-size: 13px; color: rgb(122, 122, 122); line-height: 2;">责编|党建中心</p>
-<p style="font-size: 13px; color: rgb(122, 122, 122); line-height: 2;">审核|责任老师</p>
-</div>
-```
-
-## 秀米归一化（写 HTML 时注意）
-
-- 字号会被转成百分比：`15px→80%`、`16px→106.667%`、`20px→133.333%`；写 `px` 即可，秀米自己换算。
-- `background-image: linear-gradient()` 会被丢弃；空 `<span></span>` 会被丢弃，装饰元素必须塞 `&nbsp;`。
-- `<p>` 最小高度约 12px，所以 1px 细线必须写成 `display:inline-block;width:100%;height:1px;background-color:…` 的 `span`。
-- 卡片宽度不能靠 `width` 撑，统一 `width:100%` 让秀米按 289px 排版。
+- **分隔符**：按参考和明确要求记录分隔符两侧的实际内容与留白，不只数总数。例如章间有装饰，不代表标题与紧接的表格之间也要插入。
+- **渐变色表**：用户要求逐行渐变时，先记录指定着色区域的首末行原色，再用中间各行的纯色完成过渡。不在单行内使用渐变背景，不改未指定的列或表头。
+- **标题溢出**：按目标版心检查文字、编号和装饰的完整边界。默认先用参考允许的换行或同系列宽版组件修正，不截断原文；仅在用户要求标注溢出时，在对应正文标题开头加 `【排版溢出】`，不改文章元数据标题。

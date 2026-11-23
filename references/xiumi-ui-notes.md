@@ -2,8 +2,14 @@
 
 ## 环境与连接
 
-- 专用 Chrome（Cookie 长期有效，人工登录一次即可）：
-  `chrome.exe --remote-debugging-port=9222 --remote-allow-origins=* --user-data-dir=<专用目录> https://xiumi.us/`
+- 优先连接现有的专用 Chrome。未启动时，用本机 Chrome 可执行文件和持久的独立用户目录启动（macOS 示例）：
+
+  ```bash
+  "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" \
+    --remote-debugging-port=9222 --user-data-dir="<专用目录>" "https://xiumi.us/"
+  ```
+
+- 在该浏览器打开用户给的编辑链接，核对完整草稿 ID 和预期正文；若加载后跳到新稿，不能把它当目标。如果确实要求新建，可通过首页「新建一个图文」进入。只有遇到登录或权限阻塞时才请用户处理；登录后重新打开指定目标，不索取或记录密码。
 - 连接用 `scripts/cdp.py`（`requests` + `websocket-client`，纯 CDP），配合 `scripts/layout.py`；**不需要 Playwright，沙箱内可直接跑**。
 - 编辑器地址 `https://xiumi.us/studio/v5#/paper/for/<草稿ID>/cube/0`；预览 `https://v.xiumius.cn/board/v5/<短码>/<草稿ID>`（会 302 到 `c.xiumius.cn`）。
 - 需要 Playwright 的只有老路径 `scripts/xiumi.py`（登录、图库上传），那一步在沙箱内会 PermissionError，需提权。
@@ -13,13 +19,22 @@
 | 用途 | 选择器 / 做法 |
 | --- | --- |
 | 正文格 | `.tn-page-vessel .tn-cell-text`（**必须限定 `.tn-page-vessel`**：模板面板里也有 `.tn-cell-text`，不限定会把模板算进来） |
-| 顶层组件 | 正文格所属 `.tn-group-box-wrapper` 的子元素（类名 `tn-comp-top-level`） |
-| 卡片框 | `div[style*="border:1px solid #f0e0c0"]`；口号/标题卡是 `border:1px solid #c7000b` |
-| 缎带标题 | `span[style*="border-top: 13px"]`，每个标题 2 个（左右三角），一段标题=2 |
+| 顶层组件 | `.tn-page-vessel` 内的 `.tn-comp-top-level`；以这些组件为单位查看其下的文字格、图形和图片 |
 | 组件工具条-删除 | `.dc-cp-delete button`。文档里有多个同名元素，**只取 rect 可见的那个**（隐藏 depot 里的 rect 为 0） |
-| 保存按钮 | `.tn-op-btn-group` 里 `innerText === '保存'` 的元素（约 x=958,y=26） |
+| 保存按钮 | `.tn-op-btn-group` 里 `innerText === '保存'` 的可见元素，按当前边界定位 |
 | 标题输入框 | `input[placeholder*="标题"]`，set value + input/change 事件 |
 | 底部 26px 块 | `.tn-quick-input-block`（快速输入 UI，不是正文，不要试图删除） |
+
+## 组件复用与定位
+
+- **核对一次完整的复用链。** 先在目标稿找同类组件，借画面和 `.tn-comp-top-level` 确认外层边界。选中整个组件，用其工具栏「复制」，核对左栏「剪贴板」预览是否包含所有文字格和装饰。到目标位置，按当前界面使用剪贴板预览或组件插入控件；对照插入前的前后邻居与组件数量，确认是新增而非替换。复制未成功时，改用左栏对应的标题、正文、布局等模板插入同类组件，以参考样式为准调整。不复制编辑器内部 DOM，也不在原组件上试填。
+- 跨稿复用不得写入参考稿；若两个标签页之间不能共享组件剪贴板，则在目标内用模板搭建。填入前确认页面仍是目标稿，填完核对复制件中没有带入不属于正文的参考文字、图片和跳转。
+- 改结构前后重新读取画布。以章节、邻近文本和组件类型定位，再计算当前格索引并核对原内容、父组件；不要沿用插入前的索引。`layout.py state` 只提供简略快照；卡片统计和 `insert --card` 仅识别正文格内四边都有边框的容器，不适用于无边框卡片。
+- `insert --cell` 默认替换该格最后一个空段；找不到空段时会替换最后一个子元素，并非总是追加。用它填空格前先确认落点；替换组件文字时只选中目标文字或段落，不框选相邻组件。
+- 查看实际画面和组件层级。没有文字不代表组件为空：它可能是图片、图形、分隔或设计留白。原生组件的渐变和图形可以保留；富文本粘贴经过归一化，某些样式（如渐变）可能丢失，不能据此判断原生组件也不支持。
+- **复合标题**：用标题编号或邻近正文定位父组件，再核对文字格的 `opera-tn-ra-cell` 路径、原文和画面位置，区分编号格、标题格和装饰格。不要按固定索引或“第一个空格”猜落点。激活真正的标题格后优先用原生文本输入，保留原有样式；改完确认标题在画面上可见，且装饰未变。
+- **复合装饰**：需要框选时，选框覆盖完整图形（如双圆的两个圆圈），而非单个子图形；工具栏出现「复制」不是选中整件的证据。检查剪贴板预览；若误删子图形，先撤销，再选整件。
+- **原生日程表**：用表格的插入行控件补足阶段行，用原生颜色控件逐行设置色值。增行后重新定位时间格和内容格，逐行检查，避免把合并或空白单元格当成独立阶段，或留下复制行的旧内容。
 
 ## 落库规则（最重要）
 
@@ -27,7 +42,8 @@
 - `document.execCommand('insertHTML' | 'delete')` **可以落库**，但前提是**目标格已被真实点击激活**：先 `Input.dispatchMouseEvent` 在格内 `mousePressed` + `mouseReleased`，再设 Range 执行命令。在未激活的格上执行 = 假改动（这就是"图片不入库"的最常见原因）。
 - **不要用空插入删除**：`execCommand('insertHTML', false, '')` 会触发整篇按模型重建，把其它尚未落库的改动一并冲掉。删除用 `execCommand('delete')`；替换就给非空 HTML（常用 `<p style="height: 12px; font-size: 12px; line-height: 1px;">&nbsp;</p>`）。
 - 纯样式修改（例如把 wrapper 的 `padding` 归零）：激活该格 → 改 style → 敲一次空格再退格（制造 input 事件让编辑器收下）→ 保存。实测可持久。
-- **收尾一律 `save → reload → 读 DOM`**，保存前的 DOM 可能是假象。
+- 用目标稿的可见「保存」按钮，等编辑器明确报告保存成功；若没有明确提示，可用浏览器网络记录确认本次点击对应目标稿的保存响应明确成功，不能只看 HTTP 状态、固定等待或按钮恢复可点。仍无法确认时，保留当前编辑页并报告，不贸然重载。`layout.py verify` 会在固定等待后重载，不适用于尚未确认服务器保存的情况。
+- 确认保存后再重载，等目标稿的预期正文和表格出现，而非只等编辑器外壳。如果提示「未保存到服务器」或仅恢复了本地内容，先保留或恢复编辑，再重新核对和保存；不得标为通过。
 - 一次 `Runtime.evaluate` 里做完一串 DOM 改动并不会"更可靠"，关键仍是激活格 + 编辑器命令。
 
 ## 图片
@@ -35,18 +51,16 @@
 - 图片"入库"的本质：`<img src="//img.xiumi.us/xmi/ua/...">` 经 `insertHTML` 插进**已激活**的卡片内，保存后仍然存在。格未激活时它会静默消失。
 - 上传新图：左侧「我的图库 → 上传图片(无水印)」。纯 CDP 可用 `Page.setInterceptFileChooserDialog` + `DOM.setFileInputFiles`；或直接用 `scripts/xiumi.py upload`（Playwright，需提权）。
 - 实测 base64 粘贴导图不可靠（3 张只进 2 张）。
-- 卡内图片统一 `style="width:100%;vertical-align:middle;"`（= 289px），不要写死像素宽。
+- 通栏图片可用 `style="width:100%;vertical-align:middle;"`；其他图片按参考和组件内实际宽度适配，保持原比例。
 
 ## 结构类坑
 
-- 画布正文宽 343px。每个顶层组件的 wrapper 都是 `background-color:#fdf8eb;padding:16px 12px 20px 12px;`，**两个组件相接时两层 padding 叠加，空隙约 50px**，用户会当成"空白单元格"。处置：把相邻面的 `paddingTop` / `paddingBottom` 归零；一件正文最好只保留少量顶层组件。
-- 粘贴长文会被秀米拆成多个 cell；每个 cell 又是独立组件、各自带 padding，所以拆得越多，跨节空隙越多。
-- 因标题缎带单独成卡导致"标题跑出框"时：把标题 `<p>` 插进正文卡开头（选中卡内首个 `12px` 空段替换为「标题 + 空段」），再删掉原来的空标题卡。
+- 组件相邻时，边距或内边距可能叠出意外空隙。先按参考判断是否需要修正，再调整相邻组件的间距；不靠合并全文消除空隙，也不机械使用 `zero-padding`。
+- 一次粘贴长文可能被重排为多个格；如一个片段也被拆开，缩小到单个语义块，先确认其继承的字号、颜色及行距再继续。
+- 若参考确实将标题和正文放在同一张卡，填完后确认标题没有被粘贴到卡外；独立标题是参考设计时则应保留。
 - `Range.setStartBefore(a) / setEndAfter(b)` + `insertHTML` 合并相邻块会**吞掉后一块的首段**（实测把下一节标题卷进前一卡）。合并后必须核对；误并了就反向修回来。
 
 ## 其它已实测
 
-- 初次整篇投递：仍推荐"复制富文本 + 画布 `Ctrl+A` / `Ctrl+V`"（源页 `execCommand('copy')`）。秀米会按基础格式重排并拆成多个 cell，**先设基础格式再粘**。
-- 顶部「更多」里有：导入公众号文章、导入 HTML 代码、另存一个图文、**另存图文给其他用户**（投稿另存到学院账号靠它）、收集图片、生成长图/PDF/视频、一键排版。
+- 顶部「更多」里有：导入公众号文章、导入 HTML 代码、另存一个图文、收集图片、生成长图/PDF/视频、一键排版。
 - 封面槽位 `.left-part`（`ng-click="onCoverEditingStart"`）的背景由 Angular `ng-style` 绑定，读 `style` 看不出，自动化点选不可靠 —— 封面留给人工两步操作，或在公众号后台选。
-- 每次改结构前后都跑一次 `layout.py state` 做快照，出问题好定位。
