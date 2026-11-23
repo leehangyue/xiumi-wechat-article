@@ -6,7 +6,7 @@ document.execCommand('insertHTML' | 'delete')」才会写进模型。
 任何直接 DOM 改动（remove / insertAdjacentHTML / 改 style）保存后都会还原。
 
 子命令：
-  state              打印结构（组件/卡片/缎带/图片/尾串）
+  state              打印结构（组件/边框容器/图片/尾串）
   activate N         真实点击激活第 N 个正文格
   insert             在目标格内插入 HTML（默认自动先激活该格）
   delete-comp N      删除第 N 个顶层组件
@@ -23,25 +23,26 @@ sys.path.insert(0, HERE)
 import cdp, xm
 
 CELL = ".tn-page-vessel .tn-cell-text"
-CARD = "border:1px solid #f0e0c0"
 SPACER = '<p style="height: 12px; font-size: 12px; line-height: 1px;">&nbsp;</p>'
+
+CARDS_OF_JS = """function (el) {
+  return Array.from(el.querySelectorAll('div,section')).filter(function (node) {
+    const s = getComputedStyle(node);
+    return ['Top', 'Right', 'Bottom', 'Left'].every(function (side) {
+      return parseFloat(s['border' + side + 'Width']) > 0;
+    });
+  });
+}"""
 
 STATE_JS = """(() => {
   const cs = [].slice.call(document.querySelectorAll('%s'));
-  const cardSel = '%s';
-  const cardsOf = function (el) {
-    return [].slice.call(el.querySelectorAll('div')).filter(function (d) {
-      const s = d.getAttribute('style') || '';
-      return s.indexOf(cardSel) >= 0 || s.indexOf('border:1px solid #c7000b') >= 0;
-    });
-  };
+  const cardsOf = %s;
   return JSON.stringify(cs.map(function (c, i) {
     const b = c.getBoundingClientRect();
     return {
       i: i,
       h: Math.round(b.height),
       图: c.querySelectorAll('img').length,
-      缎带: c.querySelectorAll('span[style*="border-top: 13px"]').length / 2,
       卡: cardsOf(c).map(function (d) {
         const t = (d.innerText || '').replace(/\\s+/g, ' ').trim();
         return (t ? t.slice(0, 8) : '空') + '[' + d.querySelectorAll('img').length + ']';
@@ -49,7 +50,7 @@ STATE_JS = """(() => {
       尾: (c.innerText || '').replace(/\\s+/g, ' ').trim().slice(-16)
     };
   }), null, 1);
-})()""" % (CELL, CARD)
+})()""" % (CELL, CARDS_OF_JS)
 
 COMP_JS = """(() => {
   const cell = document.querySelector('%s');
@@ -163,11 +164,11 @@ def build_target_js(cell, card_kw, text_kw, which):
     if card_kw:
         pick = {"self": "card", "last": "card.lastElementChild", "first": "card.firstElementChild"}[which]
         return """(() => { const c = [].slice.call(document.querySelectorAll('%s'))[%d];
-          const cards = [].slice.call(c.querySelectorAll('div')).filter(function (d) {
-            const s = d.getAttribute('style') || '';
-            return s.indexOf('%s') >= 0 || s.indexOf('border:1px solid #c7000b') >= 0; });
+          if (!c) return null;
+          const cardsOf = %s;
+          const cards = cardsOf(c);
           const card = cards.filter(function (d) { return (d.innerText || '').indexOf(%s) >= 0; })[0] || null;
-          return card ? %s : null; })()""" % (CELL, cell, CARD, json.dumps(card_kw), pick)
+          return card ? %s : null; })()""" % (CELL, cell, CARDS_OF_JS, json.dumps(card_kw), pick)
     # 无定位参数：取该格最后一个空段，没有就用格的最后一个元素
     return """(() => { const c = [].slice.call(document.querySelectorAll('%s'))[%d];
       const ps = [].slice.call(c.querySelectorAll('p'));
@@ -304,7 +305,7 @@ def main():
 
     p = sub.add_parser("insert")
     p.add_argument("--cell", type=int, required=True)
-    p.add_argument("--card", default="", help="按卡片内文字定位（如 03）")
+    p.add_argument("--card", default="", help="按四边有边框的容器内文字定位")
     p.add_argument("--text", default="", help="按元素文字定位")
     p.add_argument("--which", default="last", choices=["self", "last", "first"])
     p.add_argument("--html-file", default="")
